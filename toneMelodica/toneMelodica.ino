@@ -1,7 +1,7 @@
 #include "pitches.h"
 #define REFRESH_TIME 1000 // how often check for inputs
 
-#define DEBUG false
+#define DEBUG true
 
 int Lick[] = {
   NOTE_G4,
@@ -32,32 +32,45 @@ int octave[] = {
     NOTE_B4
 };
 
-char lastNote;
+int lastNote;
 //http://harperjiangnew.blogspot.com/2013/05/arduino-port-manipulation-on-mega-2560.html
 //we will use the 12 pins between 22-33  on registers PORTA and PORTC
 //DO NOT USE PORTD register. They are used for some internal stuff and cant be set to pullup high
 
 
-// function to find the rightmost NOT set bit (0) in a char
-char RightmostBit(char n)
+// function to find the rightmost NOT set bit (0) in a byte
+int RightmostBit(byte n)
 {
-  for (char i = 0; i < 8; i++){
+  for (int i = 0; i < 8; i++){
     if(((n >> i) & 1)  ==  0){
       return i;
     }
   }
   return -1; // if no set bits are found
 }
+
+//same as above but in other directon: find the leftmost 0 bit in the byte
+int LeftmostBit(byte n)
+{
+  for (int i = 7; i > -1; i--){
+    if(((n >> i) & 1)  ==  0){
+      return i;
+    }
+  }
+  return -1; // if no set bits are found
+}
+
+
 // function to read the ports and return the index of the key pressed -1,0,1...,11
-char readPorts(){
-  //char pinsA; // 22-29
-  //char pinsC; // 30-37
+int readPorts(){
+  //byte pinsA; // 22-29 linear order
+  //byte pinsC; // 30-37 reversed order 
   
-  char ind = RightmostBit(PINA);
+  int ind = RightmostBit(PINA);
   if(ind != -1){
     return ind;
   }else{
-    ind = RightmostBit(PINC);
+    ind = LeftmostBit(PINC);
     if(ind != -1){
       return ind + 8;
     }else{
@@ -111,11 +124,11 @@ void loop() {
 
 
 /*
-char readPorts(){
-  //char pinsA; // 22-29
-  //char pinsC; // 30-37
+byte readPorts(){
+  //byte pinsA; // 22-29
+  //byte pinsC; // 30-37
   
-  char ind = RightmostBit(PINA);
+  byte ind = RightmostBit(PINA);
   if(ind != -1){
     return ind/2;
   }else{

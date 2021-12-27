@@ -1,7 +1,7 @@
 #include "pitches.h"
-#define REFRESH_TIME 1000 // how often check for inputs
+#define REFRESH_TIME 10 // how often check for inputs
 
-#define DEBUG true
+#define DEBUG false
 
 int Lick[] = {
   NOTE_G4,
@@ -32,8 +32,9 @@ int octave[] = {
     NOTE_B4
 };
 
-int lastNote;
-//http://harperjiangnew.blogspot.com/2013/05/arduino-port-manipulation-on-mega-2560.html
+int lastNote, newNote,lastMultiplier,newMultiplier;
+
+
 //we will use the 12 pins between 22-33  on registers PORTA and PORTC
 //DO NOT USE PORTD register. They are used for some internal stuff and cant be set to pullup high
 
@@ -52,13 +53,17 @@ int RightmostBit(byte n)
 //same as above but in other directon: find the leftmost 0 bit in the byte
 int LeftmostBit(byte n)
 {
-  for (int i = 7; i > -1; i--){
+  //Only check 4 first bits as the rest are unsused in this application  i = 7,6,5,4
+  for (int i = 7; i > 3; i--){
     if(((n >> i) & 1)  ==  0){
-      return i;
+      return 7-i; 
+      // 7->0
+      // 6->1...
     }
   }
   return -1; // if no set bits are found
 }
+
 
 
 // function to read the ports and return the index of the key pressed -1,0,1...,11
@@ -95,13 +100,30 @@ void setup() {
       //pause for the note's duration plus 30 ms:
       delay(noteDuration +30);
    }
+  if(DEBUG){
+    long int t1 = micros();
+   lastNote = readPorts();
+   long int t2 = micros();
+   Serial.print("Reading ports takes: "); Serial.print(t2-t1); Serial.println(" microseconds"); 
+  }
 }
 
+
+
 void loop() {
-  lastNote = readPorts();
-  if(lastNote != -1){
-    tone(8, octave[lastNote] ,REFRESH_TIME);
+  newNote = readPorts();
+  newMultiplier = ((PINC & 1) + 1);
+  //Octave pin 37
+  if(newNote != lastNote || lastMultiplier != newMultiplier){
+    lastNote =  newNote;
+    lastMultiplier = newMultiplier;
+    if(lastNote == -1){
+      noTone(8); // stop playing if no keys are pressed
+    }else{
+      tone(8, lastMultiplier * octave[lastNote]); //play indefinitely while on same note
+    }
   }
+  
   if(DEBUG){
       Serial.print("Playing note with index: "); 
       Serial.print(lastNote, DEC); 
@@ -113,10 +135,6 @@ void loop() {
 
       Serial.print("PINC: "); 
       Serial.print(PINC, BIN); 
-      Serial.println(); 
-
-      Serial.print("PIND: "); 
-      Serial.print(PIND, BIN); 
       Serial.println(); 
    }
   delay(REFRESH_TIME);
@@ -146,3 +164,13 @@ byte readPorts(){
   }
 }
 */
+
+byte flipByte(byte c){
+  char r=0;
+  for(byte i = 0; i < 8; i++){
+    r <<= 1;
+    r |= c & 1;
+    c >>= 1;
+  }
+  return r;
+}
